@@ -4,7 +4,7 @@
 # 🔄 REWARE CONFIGURATION
 # ==============================================================================
 UPDATE_URL="https://raw.githubusercontent.com/qw1032266-art/reware-dev/main/reware.command"
-SCRIPT_PATH="$0"
+SCRIPT_PATH="$HOME/Desktop/reware.command"
 
 # Define the master logo text art variable
 logo="\033[1;36m██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ███████╗
@@ -28,9 +28,10 @@ run_system_update() {
         cp "$tmp_file" "$SCRIPT_PATH"
         chmod +x "$SCRIPT_PATH"
         rm -f "$tmp_file"
-        echo -e "\033[1;35m[✨] REWARE successfully updated! Restarting terminal...\033[0m"
+        echo -e "\033[1;35m[✨] REWARE successfully updated! Launching new version...\033[0m"
         sleep 1.5
-        exec "$SCRIPT_PATH"
+        open "$SCRIPT_PATH"
+        kill -9 $$
     else
         echo -e "\033[1;31m[❌] Update failed. Check your internet connection or URL.\033[0m"
         rm -f "$tmp_file"
@@ -73,7 +74,7 @@ while true; do
     echo -e "$logo"
     echo -e "\033[1;31m   [⚠️ IDLE LOCK ON] TERMINAL AUTOMATICALLY PURGES AFTER 2 MINUTES OF INACTIVITY\033[0m"
     echo -e "\033[92m"
-    echo "   ┌─────────────────── REWARE COMMAND TERMINAL ───────────────────┐"
+    echo "   ┌───────────────── REWARE COMMAND TERMINAL v2.0 ─────────────────┐"
     echo "   │                                                               │"
     echo "   │  [ Choose 1 ] -> Stream Real-Time Network Packet Telemetry    │"
     echo "   │  [ Choose 2 ] -> Intercept Live Airplane Transponder Radar    │"
@@ -211,9 +212,8 @@ while true; do
         wait_for_user
 
     elif [ "$choice" == "Q" ]; then
-        break
+        kill -9 $$
     fi
 done
 
-osascript -e 'tell application "Terminal" to close front window' &
-exit
+kill -9 $$
