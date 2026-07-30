@@ -3,7 +3,7 @@
 # ==============================================================================
 # 🔄 REWARE CONFIGURATION
 # ==============================================================================
-UPDATE_URL="https://raw.githubusercontent.com/qw1032266-art/reware-dev/main/reware.command"
+UPDATE_URL="https://raw.githubusercontent.com/qw1032266-art/reware-dev/main/reware.command?nocache=\$(date +%s)"
 SCRIPT_PATH="$HOME/Desktop/reware.command"
 
 # Define the master logo text art variable
@@ -23,7 +23,10 @@ run_system_update() {
     tmp_file="/tmp/reware_latest.command"
     echo -e "\033[1;36m[📡] Fetching latest build from remote server...\033[0m"
     
-    if curl -s -f --connect-timeout 5 "$UPDATE_URL" -o "$tmp_file"; then
+    # Evaluate UPDATE_URL to refresh timestamp dynamically
+    eval_url=$(eval echo "$UPDATE_URL")
+
+    if curl -s -f --connect-timeout 5 "$eval_url" -o "$tmp_file"; then
         echo -e "\033[1;32m[✔] Latest version downloaded!\033[0m"
         cp "$tmp_file" "$SCRIPT_PATH"
         chmod +x "$SCRIPT_PATH"
