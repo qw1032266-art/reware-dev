@@ -23,7 +23,7 @@ run_system_update() {
     
     if curl -s -f --connect-timeout 5 "$UPDATE_URL" -o "$remote_temp"; then
         if cmp -s "$local_temp" "$remote_temp"; then
-            echo -e "\033[1;32m[✔] DATABASE CONFIRMATION: You are already running the latest version! No update needed.\033[0m"
+            echo -e "\n\033[1;32m[✔] DATABASE CONFIRMATION: You are already running the latest version! No update needed.\033[0m"
             rm -f "$local_temp" "$remote_temp"
             return 0
         fi
@@ -179,7 +179,7 @@ while true; do
         logo_aware="\033[1;35m █████╗ ██╗    ██╗ █████╗ ██████╗ ███████╗    █████╗ ██╗
 ██╔══██╗██║    ██║██╔══██╗██╔══██╗██╔════╝    ██╔══██╗██║
 ███████║██║ █╗ ██║███████║██████╔╝█████╗      ███████║██║
-██╔══██║██║███╗██║██╔══██║██╔══██╗██╔══╝      ██╔══██║██║
+██╔══██║██║███╗██║██╔══██║██╔══██║██╔══╝      ██╔══██║██║
 ██║  ██║╚███╔███╔╝██║  ██║██║  ██║███████╗    ██║  ██║██║
 ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝    ╚═╝  ╚═╝╚═╝\033[0m"
         echo -e "$logo_aware"
