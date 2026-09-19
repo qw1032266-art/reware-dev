@@ -1,0 +1,606 @@
+-- Load Rayfield UI Library safely
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- Create Main Window with Amber Glow Theme
+local Window = Rayfield:CreateWindow({
+   Name = "🐁 | 💻MM2 Hub",
+   LoadingTitle = "Loading Amber Glow MM2 Hub...",
+   LoadingSubtitle = "discord.gg/4CuD6tJ8X",
+   ConfigurationSaving = {
+      Enabled = false,
+   },
+   KeySystem = false,
+   Theme = "AmberGlow",
+})
+
+-- Automatically copy Discord invite when the hub loads
+pcall(function()
+    setclipboard("https://discord.gg/4CuD6tJ8X")
+end)
+
+Rayfield:Notify({
+   Title = "Discord Invite Copied!",
+   Content = "The community Discord link has been copied to your clipboard.",
+   Duration = 5,
+   Image = 4483342458,
+})
+
+-- Create Tabs with Custom Icons
+local MainTab = Window:CreateTab("Performance", 6023426915)
+local MM2Tab = Window:CreateTab("MM2 Utilities", 6023426891)
+local CombatTab = Window:CreateTab("Silent Aim & FOV", 6031763936)
+local VisualsTab = Window:CreateTab("Visuals & Sky", 6023426943)
+
+-- Services & Variables
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+--------------------------------------------------
+-- TAB 1: PERFORMANCE & OPTIMIZATION
+--------------------------------------------------
+MainTab:CreateSection("Live Performance", 6023426915)
+
+local StatsLabel = MainTab:CreateLabel("FPS: Calculating... | Ping: Calculating...")
+
+task.spawn(function()
+    while true do
+        local currentFPS = math.floor(Workspace:GetRealPhysicsFPS())
+        local pingMs = 0
+        pcall(function()
+            pingMs = math.floor(LocalPlayer:GetNetworkPing() * 1000)
+        end)
+        StatsLabel:Set("FPS: " .. currentFPS .. " | Ping: " .. pingMs .. " ms")
+        task.wait(1)
+    end
+end)
+
+MainTab:CreateSection("Boost & Optimization", 6035047395)
+
+MainTab:CreateButton({
+   Name = "⚡ Enable FPS Booster",
+   Image = 6035047395,
+   Callback = function()
+      pcall(function()
+          Lighting.GlobalShadows = false
+          for _, v in pairs(Workspace:GetDescendants()) do
+              if v:IsA("BasePart") then
+                  v.Material = Enum.Material.SmoothPlastic
+              elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                  v.Enabled = false
+              end
+          end
+      end)
+      Rayfield:Notify({
+         Title = "FPS Booster Applied",
+         Content = "Simplified graphics to maximize your frame rate!",
+         Duration = 3,
+         Image = 6035047395,
+      })
+   end,
+})
+
+--------------------------------------------------
+-- TAB 2: MM2 UTILITIES (FIXED AUTO-FARM)
+--------------------------------------------------
+MM2Tab:CreateSection("Auto Farming", 6035122244)
+
+local autoFarmActive = false
+
+-- Helper function to check if an MM2 round is currently active
+local function IsRoundActive()
+    local success, active = pcall(function()
+        if ReplicatedStorage:FindFirstChild("RoundActive") then
+            return ReplicatedStorage.RoundActive.Value
+        elseif Workspace:FindFirstChild("RoundActive") then
+            return Workspace.RoundActive.Value
+        end
+        
+        local gui = LocalPlayer:FindFirstChild("PlayerGui")
+        if gui and gui:FindFirstChild("MainGUI") then
+            local gameHolder = gui.MainGUI:FindFirstChild("Game")
+            if gameHolder and gameHolder:FindFirstChild("Timer") then
+                local timerText = gameHolder.Timer.Text
+                if timerText and timerText ~= "" and not string.match(timerText, "Intermission") and not string.match(timerText, "Voting") then
+                    return true
+                end
+            end
+        end
+        
+        return Workspace:FindFirstChild("Map") ~= nil
+    end)
+    return success and active or false
+end
+
+MM2Tab:CreateToggle({
+    Name = "Auto-Farm Coins (Round Check, Noclip, Speed 25)",
+    CurrentValue = false,
+    Flag = "AutoFarmCoins",
+    Image = 6035122244,
+    Callback = function(Value)
+        autoFarmActive = Value
+        
+        -- Separate task dedicated strictly to movement, speed, and noclip handling
+        task.spawn(function()
+            while autoFarmActive do
+                task.wait(0.1)
+                pcall(function()
+                    local character = LocalPlayer.Character
+                    if not character then return end
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    local rootPart = character:FindFirstChild("HumanoidRootPart")
+                    if not humanoid or not rootPart or humanoid.Health <= 0 then return end
+
+                    -- 1. Apply Noclip continuously while toggle is on
+                    for _, part in ipairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+
+                    -- 2. Check if round is active before attempting to gather coins
+                    if not IsRoundActive() then
+                        return
+                    end
+
+                    -- 3. Lock speed to user's preferred safe speed (25)
+                    humanoid.WalkSpeed = 25
+
+                    -- 4. Find the closest coin in the workspace
+                    local nearestCoinPart = nil
+                    local shortestDistance = math.huge
+
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if not autoFarmActive then break end
+                        if obj.Name == "Coin" or obj.Name == "Coin_Server" or (obj:IsA("BasePart") and obj.Parent and (obj.Parent.Name == "CoinContainer" or obj.Parent.Name == "Normal")) then
+                            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+                            if part then
+                                local dist = (rootPart.Position - part.Position).Magnitude
+                                if dist < shortestDistance then
+                                    shortestDistance = dist
+                                    nearestCoinPart = part
+                                end
+                            end
+                        end
+                    end
+
+                    -- 5. Move directly underneath the coin (offset down by 3 studs)
+                    if nearestCoinPart and nearestCoinPart.Parent then
+                        local underCoinPos = nearestCoinPart.Position - Vector3.new(0, 3, 0)
+                        humanoid:MoveTo(underCoinPos)
+                    end
+                end)
+            end
+            
+            -- Reset speed and collision back to normal when toggled off
+            pcall(function()
+                if LocalPlayer.Character then
+                    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        hum.WalkSpeed = 16
+                        hum:MoveTo(LocalPlayer.Character.HumanoidRootPart.Position)
+                    end
+                    for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = true
+                        end
+                    end
+                end
+            end)
+        end)
+    end,
+})
+
+MM2Tab:CreateSection("Gun Pickup (Press G)", 6035126111)
+
+local getGunEnabled = false
+
+MM2Tab:CreateToggle({
+    Name = "Enable Get Gun (Press G)",
+    CurrentValue = false,
+    Flag = "EnableGetGun",
+    Image = 6035126111,
+    Callback = function(Value)
+        getGunEnabled = Value
+    end,
+})
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and getGunEnabled and input.KeyCode == Enum.KeyCode.G then
+        local gunFound = false
+        pcall(function()
+            for _, obj in ipairs(Workspace:GetChildren()) do
+                if obj.Name == "GunDrop" and obj:FindFirstChild("Handle") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    gunFound = true
+                    LocalPlayer.Character.HumanoidRootPart.CFrame = obj.Handle.CFrame
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, obj.Handle, 0)
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, obj.Handle, 1)
+                end
+            end
+        end)
+        
+        if gunFound then
+            Rayfield:Notify({
+               Title = "Gun Pickup",
+               Content = "Successfully got the gun!",
+               Duration = 3,
+               Image = 6035126111,
+            })
+        else
+            Rayfield:Notify({
+               Title = "Gun Pickup",
+               Content = "There's no gun!",
+               Duration = 3,
+               Image = 6035126111,
+            })
+        end
+    end
+end)
+
+MM2Tab:CreateSection("Role Specific ESP", 6023426891)
+
+local espInnocent = false
+local espSheriff = false
+local espMurderer = false
+
+task.spawn(function()
+    while task.wait(1) do
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local char = player.Character
+                local backpack = player:FindFirstChild("Backpack")
+                local hasGun = char:FindFirstChild("Gun") or (backpack and backpack:FindFirstChild("Gun"))
+                local hasKnife = char:FindFirstChild("Knife") or (backpack and backpack:FindFirstChild("Knife"))
+
+                local role = "Innocent"
+                if hasKnife then
+                    role = "Murderer"
+                elseif hasGun then
+                    role = "Sheriff"
+                end
+
+                local highlight = char:FindFirstChild("MM2CustomHighlight")
+                local shouldShow = (role == "Innocent" and espInnocent) or 
+                                   (role == "Sheriff" and espSheriff) or 
+                                   (role == "Murderer" and espMurderer)
+
+                if shouldShow then
+                    if not highlight then
+                        highlight = Instance.new("Highlight")
+                        highlight.Name = "MM2CustomHighlight"
+                        highlight.Parent = char
+                        highlight.Adornee = char
+                    end
+
+                    if role == "Murderer" then
+                        highlight.FillColor = Color3.fromRGB(255, 50, 50)
+                    elseif role == "Sheriff" then
+                        highlight.FillColor = Color3.fromRGB(50, 100, 255)
+                    else
+                        highlight.FillColor = Color3.fromRGB(255, 170, 0)
+                    end
+                else
+                    if highlight then
+                        highlight:Destroy()
+                    end
+                end
+            end
+        end
+    end
+end)
+
+MM2Tab:CreateToggle({Name = "Innocent ESP", CurrentValue = false, Flag = "EspInnocent", Image = 6023426891, Callback = function(V) espInnocent = V end})
+MM2Tab:CreateToggle({Name = "Sheriff ESP", CurrentValue = false, Flag = "EspSheriff", Image = 6023426891, Callback = function(V) espSheriff = V end})
+MM2Tab:CreateToggle({Name = "Murderer ESP", CurrentValue = false, Flag = "EspMurderer", Image = 6023426891, Callback = function(V) espMurderer = V end})
+
+--------------------------------------------------
+-- GOLD C4 BOMB & SPAWN BUTTON (ON-CLICK ONLY)
+--------------------------------------------------
+MM2Tab:CreateSection("Gold C4 Bomb", 6031094697)
+
+local C4Config = {
+	Cooldown = 2,
+	CanUse = true
+}
+
+local CurrentDroppedBomb = nil
+local c4Loaded = false
+
+local function BuildC4()
+	local Main = Instance.new("Part")
+	Main.Name = "Handle"
+	Main.Size = Vector3.new(1.8, 0.7, 1.2)
+	Main.Color = Color3.fromRGB(255, 180, 50)
+	Main.Material = Enum.Material.Metal
+	Main.CanCollide = true
+	return Main
+end
+
+local function GiveC4Tool()
+	pcall(function()
+		local Tool = Instance.new("Tool")
+		Tool.Name = "Gold C4 Bomb"
+		Tool.RequiresHandle = true
+		Tool.CanBeDropped = false
+		Tool.Grip = CFrame.new(0, -0.2, 0.2) * CFrame.Angles(0, math.rad(180), 0)
+		
+		local C4Part = BuildC4()
+		C4Part.Parent = Tool
+		
+		Tool.Activated:Connect(function()
+			if not C4Config.CanUse then return end
+			local char = LocalPlayer.Character
+			local hrp = char and char:FindFirstChild("HumanoidRootPart")
+			if not hrp then return end
+			
+			C4Config.CanUse = false
+			
+			if CurrentDroppedBomb then CurrentDroppedBomb:Destroy() end
+			
+			local d_handle = BuildC4()
+			d_handle.CFrame = hrp.CFrame * CFrame.new(0, -3.2, 0)
+			d_handle.Parent = game.Workspace
+			
+			CurrentDroppedBomb = d_handle
+
+			local bv = Instance.new("BodyVelocity", d_handle)
+			bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+			bv.Velocity = ((Mouse.Hit.p - hrp.Position).Unit * 25) + Vector3.new(0, 10, 0)
+			
+			game.Debris:AddItem(bv, 0.1)
+			
+			local parts = {}
+			for _, p in pairs(Tool:GetChildren()) do
+				if p:IsA("BasePart") then parts[p] = p.Transparency p.Transparency = 1 end
+			end
+			
+			task.wait(C4Config.Cooldown)
+			
+			if CurrentDroppedBomb then 
+				CurrentDroppedBomb:Destroy() 
+				CurrentDroppedBomb = nil
+			end
+			
+			for p, trans in pairs(parts) do if p then p.Transparency = trans end end
+			C4Config.CanUse = true
+		end)
+		
+		Tool.Parent = LocalPlayer.Backpack
+	end)
+end
+
+local function SpawnC4System()
+    GiveC4Tool()
+
+    if not c4Loaded then
+        c4Loaded = true
+
+        local sg = Instance.new("ScreenGui", PlayerGui)
+        sg.Name = "C4_Final_Menu"
+        sg.ResetOnSpawn = false
+
+        local toggle = Instance.new("TextButton", sg)
+        toggle.Size = UDim2.new(0, 60, 0, 40)
+        toggle.Position = UDim2.new(0, 10, 0.5, 0)
+        toggle.Text = "MENU"
+        toggle.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+        toggle.Draggable = true
+
+        local frame = Instance.new("Frame", sg)
+        frame.Size = UDim2.new(0, 180, 0, 100)
+        frame.Position = UDim2.new(0.5, -90, 0.4, 0)
+        frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        frame.Visible = false
+
+        local input = Instance.new("TextBox", frame)
+        input.Size = UDim2.new(0.8, 0, 0, 30)
+        input.Position = UDim2.new(0.1, 0, 0.2, 0)
+        input.Text = tostring(C4Config.Cooldown)
+        input.PlaceholderText = "Giây hồi..."
+
+        local btn = Instance.new("TextButton", frame)
+        btn.Size = UDim2.new(0.8, 0, 0, 30)
+        btn.Position = UDim2.new(0.1, 0, 0.6, 0)
+        btn.Text = "LƯU"
+        btn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+
+        toggle.MouseButton1Click:Connect(function() frame.Visible = not frame.Visible end)
+        btn.MouseButton1Click:Connect(function() 
+            C4Config.Cooldown = tonumber(input.Text) or 0
+            frame.Visible = false
+        end)
+    end
+end
+
+MM2Tab:CreateButton({
+   Name = "💣 Spawn Gold C4 Menu & Tool",
+   Image = 6031094697,
+   Callback = function()
+      SpawnC4System()
+      Rayfield:Notify({
+         Title = "Gold C4 Activated",
+         Content = "Spawned C4 menu GUI and added tool to backpack!",
+         Duration = 3,
+         Image = 6031094697,
+      })
+   end,
+})
+
+--------------------------------------------------
+-- TAB 3: SILENT AIM & CIRCLE FOV
+--------------------------------------------------
+CombatTab:CreateSection("Silent Aim Settings", 6031763936)
+
+local silentAimEnabled = false
+local fovRadius = 150
+
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = false
+FOVCircle.Transparency = 0.7
+FOVCircle.Color = Color3.fromRGB(255, 170, 0)
+FOVCircle.Thickness = 2
+FOVCircle.Filled = false
+
+CombatTab:CreateToggle({
+    Name = "Enable Silent Aim",
+    CurrentValue = false,
+    Flag = "SilentAimToggle",
+    Image = 6031763936,
+    Callback = function(Value)
+        silentAimEnabled = Value
+        FOVCircle.Visible = Value
+    end,
+})
+
+CombatTab:CreateSlider({
+    Name = "Circle FOV Radius",
+    Range = {50, 400},
+    Increment = 5,
+    CurrentValue = 150,
+    Flag = "FOVRadiusSlider",
+    Callback = function(Value)
+        fovRadius = Value
+        FOVCircle.Radius = Value
+    end,
+})
+
+RunService.RenderStepped:Connect(function()
+    local mouseLocation = UserInputService:GetMouseLocation()
+    FOVCircle.Position = mouseLocation
+end)
+
+pcall(function()
+    local metatable = getrawmetatable(game)
+    setreadonly(metatable, false)
+    local oldNamecall = metatable.__namecall
+
+    metatable.__namecall = newcclosure(function(self, ...)
+        local args = {...}
+        local method = getnamecallmethod()
+        
+        if silentAimEnabled and method == "FireServer" and (self.Name == "Shoot" or self.Name == "WeaponEvent") then
+            local targetPlayer = nil
+            local shortestDist = fovRadius
+            
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                    local head = player.Character.Head
+                    local screenPoint, onScreen = Camera:WorldToScreenPoint(head.Position)
+                    
+                    if onScreen then
+                        local mousePos = UserInputService:GetMouseLocation()
+                        local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
+                        
+                        if dist < shortestDist then
+                            shortestDist = dist
+                            targetPlayer = player
+                        end
+                    end
+                end
+            end
+            
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                args[1] = targetPlayer.Character.Head.Position
+                return oldNamecall(self, unpack(args))
+            end
+        end
+        
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(metatable, true)
+end)
+
+--------------------------------------------------
+-- TAB 4: VISUALS, PROCEDURAL AMBER SKY & SHADERS
+--------------------------------------------------
+VisualsTab:CreateSection("Amber Sky & Atmosphere", 6023426943)
+
+VisualsTab:CreateButton({
+   Name = "🌅 Apply Amber Procedural Sky",
+   Image = 6023426943,
+   Callback = function()
+      pcall(function()
+          for _, v in pairs(Lighting:GetChildren()) do
+              if v:IsA("Sky") then
+                  v:Destroy()
+              end
+          end
+          
+          Lighting.ClockTime = 17.5
+          Lighting.Brightness = 2.5
+          Lighting.Ambient = Color3.fromRGB(245, 180, 100)
+          Lighting.OutdoorAmbient = Color3.fromRGB(200, 130, 60)
+          Lighting.ColorShift_Top = Color3.fromRGB(255, 160, 50)
+          Lighting.ColorShift_Bottom = Color3.fromRGB(120, 60, 10)
+          
+          local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+          if not atmosphere then
+              atmosphere = Instance.new("Atmosphere")
+              atmosphere.Parent = Lighting
+          end
+          atmosphere.Density = 0.35
+          atmosphere.Offset = 0.25
+          atmosphere.Color = Color3.fromRGB(255, 150, 70)
+          atmosphere.Decay = Color3.fromRGB(100, 50, 20)
+          atmosphere.Glare = 0.4
+          atmosphere.Haze = 2
+      end)
+      Rayfield:Notify({
+         Title = "Amber Sky Applied",
+         Content = "Procedural golden sunset sky loaded successfully!",
+         Duration = 3,
+         Image = 6023426943,
+      })
+   end,
+})
+
+VisualsTab:CreateSection("Smooth Camera FOV", 6023426915)
+
+local targetFOV = 70
+VisualsTab:CreateSlider({
+   Name = "Field of View (Smooth)",
+   Range = {70, 120},
+   Increment = 1,
+   CurrentValue = 70,
+   Flag = "SmoothFOV",
+   Callback = function(Value)
+      targetFOV = Value
+   end,
+})
+
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        Camera.FieldOfView += (targetFOV - Camera.FieldOfView) * 0.1
+    end)
+end)
+
+VisualsTab:CreateSection("Graphics Shaders", 6035047395)
+
+VisualsTab:CreateButton({
+   Name = "✨ Apply Amber Glow Cinematic Lighting",
+   Image = 6035047395,
+   Callback = function()
+      pcall(function()
+          Lighting.GlobalShadows = true
+          Lighting.Brightness = 2.4
+          Lighting.Ambient = Color3.fromRGB(240, 200, 140)
+          Lighting.OutdoorAmbient = Color3.fromRGB(180, 140, 90)
+          Lighting.ShadowSoftness = 0.3
+      end)
+      Rayfield:Notify({
+         Title = "Amber Glow Active",
+         Content = "Applied warm cinematic lighting shaders!",
+         Duration = 3,
+         Image = 6035047395,
+      })
+   end,
+})
+
+Rayfield:LoadConfiguration()
