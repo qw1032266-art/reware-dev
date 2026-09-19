@@ -127,7 +127,6 @@ MM2Tab:CreateToggle({
     Callback = function(Value)
         autoFarmActive = Value
         
-        -- Separate task dedicated strictly to movement, speed, and noclip handling
         task.spawn(function()
             while autoFarmActive do
                 task.wait(0.1)
